@@ -49,6 +49,9 @@
             </button>
             <div id="content-area" class="max-w-4xl mx-auto">
             </div>
+             <footer class="text-center text-sm text-gray-500 pt-8 mt-8 border-t border-gray-200">
+                <p>Desenvolvido por Rodrigo Niskier e Gemini.</p>
+            </footer>
         </main>
     </div>
 
@@ -277,13 +280,13 @@ const App = {
             ]
         },
         bibliography: [
-            { author: "Calvino, João", title: "As Institutas da Religião Cristã", comment: "A obra magna e o ponto de partida indispensável. O Livro I é dedicado aos temas dos prolegômenos, unindo teologia, pastoral e devoção.", link: "https://editorafiel.com.br/produtos/institutas-da-religiao-crista-edicao-classica-4-volumes" },
-            { author: "Turretin, Francis", title: "Institutes of Elenctic Theology", comment: "A obra-prima da escolástica reformada, um monumento de precisão lógica. Essencial para o estudo avançado do pensamento reformado ortodoxo.", link: "https://www.prpbooks.com/book/institutes-of-elenctic-theology-3-vols" },
-            { author: "Bavinck, Herman", title: "Dogmática Reformada, Vol. 1: Prolegômenos", comment: "Engaja a ortodoxia com os desafios da modernidade, oferecendo uma visão orgânica e trinitária da revelação. Vasta erudição com abordagem pastoral.", link: "https://www.editoraculturacrista.com.br/produto/box-dogmatica-reformada-4-volumes-1090016" },
-            { author: "Warfield, B.B.", title: "A Inspiração e Autoridade da Bíblia", comment: "A defesa clássica da inspiração e inerrância da Escritura. Combina exegese, análise histórica e rigor lógico contra o liberalismo.", link: "https://www.editoraculturacrista.com.br/produto/inspiracao-e-autoridade-da-biblia-a-513" },
-            { author: "Van Til, Cornelius", title: "The Defense of the Faith", comment: "A apresentação mais sistemática da apologética pressuposicional. Obra fundamental para compreender a epistemologia reformada do século XX.", link: "https://www.prpbooks.com/book/defense-of-the-faith-the-4th-ed" },
-            { author: "Berkhof, Louis", title: "Teologia Sistemática", comment: "O manual padrão em seminários por décadas. Celebrado pela clareza, organização e fidelidade à ortodoxia confessional. Excelente ponto de partida.", link: "https://www.editoraculturacrista.com.br/produto/teologia-sistematica-4-edicao-91550" },
-            { author: "Frame, John M.", title: "A Doutrina do Conhecimento de Deus", comment: "Uma exploração moderna e profunda da epistemologia reformada. Desenvolve o 'triperspectivalismo' como uma ferramenta didática e aplicável.", link: "https://www.vidanova.com.br/livros/a-doutrina-do-conhecimento-de-deus" }
+            { author: "Calvino, João", title: "As Institutas da Religião Cristã", comment: "A obra magna e o ponto de partida indispensável. O Livro I é dedicado aos temas dos prolegômenos, unindo teologia, pastoral e devoção." },
+            { author: "Turretin, Francis", title: "Institutes of Elenctic Theology", comment: "A obra-prima da escolástica reformada, um monumento de precisão lógica. Essencial para o estudo avançado do pensamento reformado ortodoxo." },
+            { author: "Bavinck, Herman", title: "Dogmática Reformada, Vol. 1: Prolegômenos", comment: "Engaja a ortodoxia com os desafios da modernidade, oferecendo uma visão orgânica e trinitária da revelação. Vasta erudição com abordagem pastoral." },
+            { author: "Warfield, B.B.", title: "A Inspiração e Autoridade da Bíblia", comment: "A defesa clássica da inspiração e inerrância da Escritura. Combina exegese, análise histórica e rigor lógico contra o liberalismo." },
+            { author: "Van Til, Cornelius", title: "The Defense of the Faith", comment: "A apresentação mais sistemática da apologética pressuposicional. Obra fundamental para compreender a epistemologia reformada do século XX." },
+            { author: "Berkhof, Louis", title: "Teologia Sistemática", comment: "O manual padrão em seminários por décadas. Celebrado pela clareza, organização e fidelidade à ortodoxia confessional. Excelente ponto de partida." },
+            { author: "Frame, John M.", title: "A Doutrina do Conhecimento de Deus", comment: "Uma exploração moderna e profunda da epistemologia reformada. Desenvolve o 'triperspectivalismo' como uma ferramenta didática e aplicável." }
         ]
     },
 
@@ -426,7 +429,6 @@ const App = {
             <div class="bg-amber-50 p-4 rounded-lg border border-[#D5BBA1]">
                 <h3 class="text-xl font-bold">${item.author}, <em>${item.title}</em>.</h3>
                 <p class="my-2 text-gray-700">${item.comment}</p>
-                <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="text-[#8A5A44] font-semibold hover:underline">Acessar Recurso &rarr;</a>
             </div>
         `).join('');
     },
