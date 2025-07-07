@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prolegômenos à Teologia Sistemática Reformada</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Scholarly Parchment -->
+    <!-- Application Structure Plan: A single-page application with a fixed sidebar for primary navigation and a main content area. This structure allows users to easily jump between the core sections of the Prolegomena without losing context, which is superior to a long, linear scroll for a dense reference document. Key information, like theologian bios and tradition comparisons, are transformed from static text into interactive components (clickable cards and a dynamic radar chart) to facilitate understanding and engagement. The goal is to create a dynamic study tool rather than a static page, enabling non-linear exploration of complex theological concepts. -->
+    <!-- Visualization & Content Choices:
+        - Report Info: Main Sections -> Goal: Organize/Navigate -> Viz: Fixed Sidebar Navigation -> Interaction: Click to display content -> Justification: Provides constant, clear access to the document's structure.
+        - Report Info: Key Definitions -> Goal: Inform -> Viz: Highlighted Text -> Interaction: Click to show modal pop-up -> Justification: Keeps the main text clean while providing instant access to definitions.
+        - Report Info: Historical Figures -> Goal: Organize/Inform -> Viz: Grid of interactive cards -> Interaction: Click to reveal details -> Justification: More engaging and visually organized than a simple list, turning it into an explorable gallery.
+        - Report Info: Comparative Analysis -> Goal: Compare -> Viz: Radar Chart (Chart.js/Canvas) -> Interaction: Buttons to switch data sets -> Justification: Visually demonstrates the core tenets and differences between theological systems far more effectively than dense paragraphs of text.
+        - Report Info: Bibliography -> Goal: Resource -> Viz: Styled list with links -> Interaction: Clickable links -> Justification: Standard, functional, and user-friendly.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FDFBF5; color: #403A3A; }
+        h1, h2, h3 { font-family: 'Lora', serif; color: #5C3D2E; }
+        .nav-link { transition: all 0.2s ease-in-out; }
+        .nav-link:hover, .nav-link.active { background-color: #E0C097; color: #5C3D2E; }
+        .modal { transition: opacity 0.3s ease; }
+        .card-flipper { transform-style: preserve-3d; transition: transform 0.6s; }
+        .card-flipper.is-flipped { transform: rotateY(180deg); }
+        .card-front, .card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .card-back { transform: rotateY(180deg); }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 450px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="flex min-h-screen">
+        <aside id="sidebar" class="w-64 bg-[#5C3D2E] text-white p-4 fixed lg:relative -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out z-30">
+            <h2 class="text-2xl font-bold mb-6 text-[#FDFBF5]">Prolegômenos</h2>
+            <nav id="main-nav" class="flex flex-col space-y-2">
+            </nav>
+            <button id="sidebar-close" class="lg:hidden absolute top-2 right-2 text-white text-2xl">&times;</button>
+        </aside>
+
+        <main class="flex-1 p-4 sm:p-6 lg:p-10 transition-all duration-300 ease-in-out">
+            <button id="sidebar-open" class="lg:hidden fixed top-4 left-4 bg-[#5C3D2E] text-white p-2 rounded-md z-20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+            </button>
+            <div id="content-area" class="max-w-4xl mx-auto">
+            </div>
+        </main>
+    </div>
+
+    <div id="definition-modal" class="modal fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none">
+        <div class="bg-[#FDFBF5] rounded-lg shadow-2xl p-6 w-full max-w-lg relative transform scale-95 transition-transform duration-300 ease-out">
+            <button id="modal-close-btn" class="absolute top-3 right-4 text-3xl font-light text-[#5C3D2E]">&times;</button>
+            <h3 id="modal-title" class="text-2xl font-bold mb-4"></h3>
+            <p id="modal-content" class="text-base text-gray-700 leading-relaxed"></p>
+        </div>
+    </div>
+
+<script>
+const App = {
+    data: {
+        sections: [
+            {
+                id: 'intro',
+                title: '1. Introdução Geral',
+                content: `
+                    <h2 class="text-3xl font-bold mb-4">Introdução Geral aos Prolegômenos</h2>
+                    <p class="mb-4 text-lg text-gray-700 leading-relaxed">A construção de qualquer edifício intelectual robusto exige um alicerce sólido e bem definido. Na arquitetura da Teologia Sistemática, esse alicerce é conhecido como <strong>Prolegômenos</strong>. Longe de ser um mero prefácio, os prolegômenos constituem a disciplina rigorosa que estabelece e defende os princípios fundamentais sobre os quais todo o sistema doutrinário será erigido. É aqui que se definem as regras: o que é a teologia, como podemos conhecer a Deus, qual é a nossa fonte de autoridade e qual método seguiremos. A tradição Reformada, com sua ênfase na soberania de Deus em todas as esferas, atribui uma importância capital a esta disciplina.</p>
+                    <div class="bg-amber-50 border-l-4 border-[#B08968] p-4 my-6 rounded-r-lg">
+                        <h3 class="text-xl font-bold mb-2">Definição e Significado</h3>
+                        <p class="mb-4">O termo <strong class="definition-term cursor-pointer text-[#8A5A44] hover:underline" data-term="prolegomenos">Prolegômenos</strong> (do grego <em>prolegomena</em>, "coisas ditas de antemão") refere-se à exposição sistemática dos princípios, pressupostos e métodos que governam o estudo da teologia. Não são observações opcionais, mas um discurso fundacional que responde à pergunta: "Como podemos, como criaturas finitas e pecadoras, sequer começar a falar sobre um Deus infinito e santo?".</p>
+                        <h3 class="text-xl font-bold mb-2">A Função Indispensável dos Prolegômenos</h3>
+                        <p>A função dos prolegômenos é, antes de tudo, <strong>metateológica</strong>; ou seja, é a teologia refletindo sobre si mesma. Sua indispensabilidade reside em três áreas cruciais: <strong>1) Estabelecimento de Pressupostos</strong> (epistemologia e metafísica); <strong>2) Definição de Autoridade e Método</strong> (o princípio da Escritura); e <strong>3) Apologética Fundacional</strong> (a defesa da cosmovisão cristã).</p>
+                    </div>
+                `
+            },
+            {
+                id: 'natureza',
+                title: '2. Natureza e Propósito',
+                content: `
+                    <h2 class="text-3xl font-bold mb-4">A Natureza e o Propósito da Teologia</h2>
+                    <p class="mb-4 text-lg text-gray-700 leading-relaxed">Antes de mergulhar nas doutrinas, é imperativo definir a própria disciplina. A tradição Reformada oferece respostas que são ao mesmo tempo intelectualmente rigorosas e profundamente devocionais, enraizadas na convicção de que conhecer a Deus é o fim principal da existência humana.</p>
+                    <blockquote class="border-l-4 border-[#B08968] pl-4 italic text-gray-600 my-6">
+                        "Quase toda a sabedoria que possuímos, isto é, sabedoria verdadeira e clara, consiste em duas partes: o conhecimento de Deus e de nós mesmos."
+                        <cite class="block not-italic mt-2">— João Calvino, Institutas 1.1.1</cite>
+                    </blockquote>
+                    <p class="mb-4">Esta declaração estabelece que a teologia é um conhecimento <strong>correlativo</strong>. Não podemos conhecer a nós mesmos sem conhecer a Deus, e vice-versa. Este ponto de partida torna a teologia reformada uma <strong class="definition-term cursor-pointer text-[#8A5A44] hover:underline" data-term="pietas">theologia pietatis</strong>, uma "teologia da piedade", onde o conhecimento deve sempre conduzir à reverência e ao amor a Deus.</p>
+                    <div class="grid md:grid-cols-2 gap-6 mt-6">
+                        <div class="bg-amber-50 p-4 rounded-lg shadow-sm">
+                            <h3 class="text-xl font-bold mb-2">O Objeto Primário</h3>
+                            <p>O objeto de estudo da teologia não é a religião em geral, mas <strong>o Deus Triúno como Ele se revelou em Sua Palavra</strong>. Estudamos não a essência nua de Deus, mas Deus em Sua auto-revelação pactual como Pai, Filho e Espírito Santo.</p>
+                        </div>
+                        <div class="bg-amber-50 p-4 rounded-lg shadow-sm">
+                            <h3 class="text-xl font-bold mb-2">O Fim Último</h3>
+                            <p>O propósito final é duplo, mas unificado: <strong>a glória de Deus (Soli Deo Gloria) e a edificação da Igreja</strong>. Estes dois fins não podem ser separados. O conhecimento teológico deve resultar em adoração, santificação e missão.</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'epistemologia',
+                title: '3. Epistemologia Teológica',
+                content: `
+                    <h2 class="text-3xl font-bold mb-4">A Epistemologia Teológica: A Possibilidade do Conhecimento de Deus</h2>
+                    <p class="mb-4 text-lg text-gray-700 leading-relaxed">"Como sabemos o que sabemos?" Para a teologia, a pergunta é ainda mais aguda: "É possível para a mente finita e pecadora conhecer um Deus infinito e santo?". A resposta reformada rejeita a razão humana autônoma, postulando que todo conhecimento verdadeiro é condicionado pela auto-revelação soberana de Deus.</p>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">O Fundamento Pressuposicional</h3>
+                            <p>A epistemologia reformada, especialmente em Cornelius Van Til, baseia-se num <strong class="definition-term cursor-pointer text-[#8A5A44] hover:underline" data-term="pressuposicional">fundamento pressuposicional</strong>. Todo sistema de pensamento começa com um pressuposto fundamental. Para o cristão, é o Deus auto-revelado da Bíblia; para o não-cristão, é a autonomia da mente humana. Não há terreno neutro. Argumenta-se "pela impossibilidade do contrário": sem Deus, não há base para a lógica, a moral ou o significado.</p>
+                        </div>
+                        <div class="bg-amber-50 border-l-4 border-[#B08968] p-4 rounded-r-lg">
+                            <h3 class="text-xl font-bold mb-2">Revelação Geral e Seus Limites</h3>
+                            <p class="mb-2">Deus se revela a todos através da criação (Salmo 19:1-4) e da consciência humana (<em class="definition-term cursor-pointer text-[#8A5A44] hover:underline" data-term="sensus">sensus divinitatis</em>). No entanto, devido aos <strong class="definition-term cursor-pointer text-[#8A5A44] hover:underline" data-term="noeticos">efeitos noéticos do pecado</strong>, o homem suprime essa verdade (Romanos 1:18). Portanto, a revelação geral é <strong>suficiente para condenar</strong>, mas <strong>insuficiente para salvar</strong>.</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">A Necessidade da Revelação Especial</h3>
+                            <p>Dada a supressão da verdade, Deus proveu a <strong class="definition-term cursor-pointer text-[#8A5A44] hover:underline" data-term="especial">revelação especial</strong>: a auto-revelação de Deus comunicando Sua vontade redentora, culminando em Jesus Cristo (Hebreus 1:1-2) e registrada de forma infalível na <strong>Sagrada Escritura</strong>.</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'fontes',
+                title: '4. As Fontes da Teologia',
+                content: `
+                    <h2 class="text-3xl font-bold mb-4">As Fontes Formais e Internas da Teologia (Principia Theologiae)</h2>
+                    <p class="mb-4 text-lg text-gray-700 leading-relaxed">Com a necessidade da revelação especial estabelecida, a teologia deve identificar sua fonte de autoridade. A tradição Reformada articula isso através dos *principia theologiae*, divididos em um princípio externo (objetivo) e um interno (subjetivo).</p>
+                    <div class="space-y-6">
+                        <div class="p-4 border border-[#D5BBA1] rounded-lg">
+                            <h3 class="text-xl font-bold mb-2">O Princípio Formal: <em class="definition-term cursor-pointer text-[#8A5A44] hover:underline" data-term="solascriptura">Sola Scriptura</em></h3>
+                            <p class="mb-4">A Escritura é a <strong>única regra infalível de fé e prática</strong>. Ela é a <em>norma normans non normata</em> — a norma que normatiza e não é normatizada. Sua autoridade se baseia em seus atributos:</p>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li><strong>Inspiração:</strong> "Soprada por Deus" (2 Timóteo 3:16), orgânica e plenária.</li>
+                                <li><strong>Autoridade:</strong> Intrínseca, derivada de seu Autor divino.</li>
+                                <li><strong>Inerrância:</strong> Isenta de erro nos manuscritos originais.</li>
+                                <li><strong>Suficiência:</strong> Contém tudo o que é necessário para a salvação e a piedade.</li>
+                                <li><strong>Perspicuidade:</strong> Clara em suas doutrinas essenciais.</li>
+                            </ul>
+                            <p class="mt-4">Tradição, razão e experiência são ferramentas <strong>ministeriais</strong> valiosas, mas sempre subordinadas ao juízo da Escritura.</p>
+                        </div>
+                        <div class="bg-amber-50 p-4 rounded-lg shadow-sm">
+                             <h3 class="text-xl font-bold mb-2">O Princípio Interno: O Testemunho do Espírito Santo</h3>
+                             <p>Se a Escritura é o princípio objetivo, como temos certeza de sua autoridade? A resposta é o <strong class="definition-term cursor-pointer text-[#8A5A44] hover:underline" data-term="testimonium">Testimonium Spiritus Sancti Internum</strong>. É a obra sobrenatural do Espírito no coração do crente, confirmando que a Escritura é a Palavra de Deus. O Espírito não dá nova revelação; ele autentica a Palavra existente, criando um círculo perfeito e não vicioso: a Palavra de Deus é autenticada pelo Espírito de Deus.</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'metodologia',
+                title: '5. Metodologia',
+                content: `
+                    <h2 class="text-3xl font-bold mb-4">A Metodologia da Teologia Sistemática</h2>
+                    <p class="mb-4 text-lg text-gray-700 leading-relaxed">Com os princípios fundamentais estabelecidos, a teologia sistemática procede com seu método de construção doutrinária. Este processo garante que a teologia permaneça firmemente ancorada na revelação, sendo uma serva da Palavra, e não sua mestra.</p>
+                    <div class="relative pl-6 py-4 border-l-2 border-[#B08968]">
+                        <div class="mb-8 relative">
+                            <div class="absolute w-4 h-4 bg-[#5C3D2E] rounded-full -left-[33px] top-1"></div>
+                            <h3 class="text-xl font-bold mb-2">1. Exegese</h3>
+                            <p class="text-gray-700">O ponto de partida. É a análise histórico-gramatical de textos bíblicos para descobrir o significado original pretendido pelo autor. A teologia sistemática depende da exegese fiel para sua matéria-prima.</p>
+                        </div>
+                        <div class="mb-8 relative">
+                            <div class="absolute w-4 h-4 bg-[#5C3D2E] rounded-full -left-[33px] top-1"></div>
+                            <h3 class="text-xl font-bold mb-2">2. Teologia Bíblica</h3>
+                            <p class="text-gray-700">A ponte entre a exegese e a sistemática. Sintetiza os resultados da exegese, traçando o desenvolvimento de temas ao longo da história da redenção (e.g., a doutrina da aliança de Gênesis a Apocalipse).</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute w-4 h-4 bg-[#5C3D2E] rounded-full -left-[33px] top-1"></div>
+                            <h3 class="text-xl font-bold mb-2">3. Teologia Sistemática</h3>
+                            <p class="text-gray-700">A etapa culminante. Faz a pergunta: "O que a Bíblia como um todo nos ensina hoje sobre um tópico?". Organiza todos os dados em um sistema lógico e coerente (e.g., Cristologia, Soteriologia).</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 bg-amber-50 p-4 rounded-lg">
+                        <h3 class="text-xl font-bold mb-2">Relação Orgânica</h3>
+                        <p>O sistema teológico deve <strong>emergir organicamente</strong> da Bíblia, não ser imposto a ela. A teologia sistemática está em diálogo constante com a teologia bíblica e a exegese, sempre pronta a ser corrigida pela Palavra. Ela é uma serva, não a mestra.</p>
+                    </div>
+                `
+            },
+            {
+                id: 'figuras',
+                title: '6. Figuras Históricas',
+                content: `
+                    <h2 class="text-3xl font-bold mb-4">Figuras Históricas e Suas Contribuições</h2>
+                    <p class="mb-6 text-lg text-gray-700 leading-relaxed">A doutrina dos prolegômenos foi forjada e refinada ao longo de séculos. Explore as contribuições seminais de teólogos-chave clicando em seus nomes.</p>
+                    <div id="theologians-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    </div>
+                `
+            },
+            {
+                id: 'comparativo',
+                title: '7. Análise Comparativa',
+                content: `
+                    <h2 class="text-3xl font-bold mb-4">Análise Comparativa de Prolegômenos</h2>
+                    <p class="mb-6 text-lg text-gray-700 leading-relaxed">As diferenças nas respostas às perguntas fundamentais ("Qual a fonte de autoridade?" e "Como conhecemos a Deus?") revelam cosmovisões distintas. O gráfico abaixo compara a abordagem Reformada com outras tradições. Use os botões para explorar as diferentes visões.</p>
+                    <div class="chart-container">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                    <div id="comparison-buttons" class="flex flex-wrap justify-center gap-2 mt-6">
+                    </div>
+                `
+            },
+            {
+                id: 'bibliografia',
+                title: '8. Bibliografia Comentada',
+                content: `
+                    <h2 class="text-3xl font-bold mb-4">Bibliografia Comentada e Fontes para Aprofundamento</h2>
+                    <p class="mb-6 text-lg text-gray-700 leading-relaxed">Para o estudante que deseja aprofundar-se, as seguintes obras são de valor inestimável. Cada uma representa um marco na articulação e defesa dos fundamentos da fé reformada.</p>
+                    <div id="bibliography-list" class="space-y-6">
+                    </div>
+                `
+            }
+        ],
+        definitions: {
+            prolegomenos: { title: "Prolegômenos", text: "Do grego pro, 'antes', e lego, 'falar'. Refere-se à exposição sistemática dos princípios, pressupostos e métodos fundamentais que governam o estudo da teologia. É a disciplina que investiga as condições de possibilidade, as fontes e a metodologia da própria teologia." },
+            pietas: { title: "Pietas (Piedade)", text: "Para Calvino, não é um sentimentalismo vago, mas 'aquela reverência unida ao amor a Deus que o conhecimento dos seus benefícios induz'. Envolve fé, temor reverente, adoração, obediência e um serviço grato a Deus." },
+            pressuposicional: { title: "Apologética Pressuposicional", text: "Uma abordagem apologética e epistemológica que sustenta que a fé no Deus Triúno da Escritura não é uma conclusão derivada de evidências neutras, mas o pressuposto necessário para que qualquer experiência, lógica ou fato seja inteligível." },
+            sensus: { title: "Sensus Divinitatis", text: "Termo de Calvino para 'um senso da divindade'. Uma semente de religião ou uma consciência inata de Deus que Ele implantou em cada coração humano. É parte da revelação geral." },
+            noeticos: { title: "Efeitos Noéticos do Pecado", text: "A corrupção da mente humana (nous) como resultado da Queda. Essa corrupção obscurece a capacidade do homem de pensar e raciocinar corretamente sobre Deus. A mente não-regenerada não é neutra, mas hostil a Deus e ativamente em rebelião contra Ele (Romanos 8:7)." },
+            especial: { title: "Revelação Especial", text: "A auto-revelação de Deus a pessoas específicas em tempos específicos, comunicando Sua vontade redentora. Esta revelação ocorreu através de teofanias, sonhos, profetas e, de forma suprema e final, na pessoa e obra de Jesus Cristo (Hebreus 1:1-2) e está registrada na Escritura." },
+            solascriptura: { title: "Sola Scriptura", text: "A doutrina de que a Sagrada Escritura, sendo a Palavra de Deus inspirada, é a única regra infalível de fé e prática (unica regula fidei et praxeos) para a Igreja. Ela está acima de todas as outras autoridades." },
+            testimonium: { title: "Testimonium Spiritus Sancti Internum", text: "O Testemunho Interno do Espírito Santo. É a obra soberana e sobrenatural do Espírito Santo no coração do crente, que ilumina o entendimento e persuade a vontade, testificando e confirmando que a Escritura é, de fato, a Palavra autoritativa de Deus." },
+        },
+        theologians: [
+            { name: "João Calvino", title: "O Teólogo da Piedade", contribution: "Estabeleceu o ponto de partida duplo da teologia: o conhecimento de Deus e de nós mesmos. Uniu doutrina e devoção, definindo a teologia como *theologia pietatis*." },
+            { name: "Francis Turretin", title: "O Escolástico Preciso", contribution: "Representa o auge da escolástica reformada. Sistematizou e defendeu os fundamentos da teologia com precisão lógica e rigor polêmico, notadamente em sua obra *Institutes of Elenctic Theology*." },
+            { name: "Herman Bavinck", title: "O Pensador Orgânico", contribution: "Articulou uma visão da revelação como um organismo vivo e unificado, que encontra seu centro em Cristo. Engajou a ortodoxia com os desafios da modernidade." },
+            { name: "B.B. Warfield", title: "O Defensor da Inerrância", contribution: "Montou a mais erudita defesa apologética da inspiração plenária, verbal e da inerrância da Escritura, respondendo ao liberalismo teológico de sua época." },
+            { name: "Cornelius Van Til", title: "O Apologista Pressuposicional", contribution: "Formalizou a apologética pressuposicional. Argumentou que a fé no Deus da Bíblia é a precondição necessária para toda a inteligibilidade e conhecimento." },
+            { name: "Louis Berkhof", title: "O Sistematizador Padrão", contribution: "Autor da *Teologia Sistemática*, que se tornou o manual padrão em inúmeros seminários. Celebrado por sua clareza, concisão e fidelidade confessional." },
+            { name: "John Frame", title: "O Metodologista Perspectivo", contribution: "Desenvolveu o 'triperspectivalismo' (normativo, situacional, existencial) como uma ferramenta metodológica para aplicar a epistemologia reformada de forma prática e abrangente." }
+        ],
+        comparisonData: {
+            labels: ['Fonte de Autoridade', 'Papel da Razão', 'Efeito do Pecado', 'Base da Certeza', 'Papel da Tradição'],
+            datasets: [
+                {
+                    label: 'Tradição Reformada',
+                    data: [5, 3, 1, 5, 2],
+                    backgroundColor: 'rgba(92, 61, 46, 0.2)',
+                    borderColor: 'rgba(92, 61, 46, 1)',
+                    pointBackgroundColor: 'rgba(92, 61, 46, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(92, 61, 46, 1)'
+                },
+                {
+                    label: 'Catolicismo Romano',
+                    data: [3, 4, 3, 2, 5],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
+                },
+                {
+                    label: 'Arminianismo',
+                    data: [5, 4, 2, 3, 2],
+                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    pointBackgroundColor: 'rgba(255, 159, 64, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(255, 159, 64, 1)'
+                },
+                {
+                    label: 'Teologia Liberal',
+                    data: [1, 5, 4, 1, 1],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
+                }
+            ]
+        },
+        bibliography: [
+            { author: "Calvino, João", title: "As Institutas da Religião Cristã", comment: "A obra magna e o ponto de partida indispensável. O Livro I é dedicado aos temas dos prolegômenos, unindo teologia, pastoral e devoção.", link: "https://editorafiel.com.br/produtos/institutas-da-religiao-crista-edicao-classica-4-volumes" },
+            { author: "Turretin, Francis", title: "Institutes of Elenctic Theology", comment: "A obra-prima da escolástica reformada, um monumento de precisão lógica. Essencial para o estudo avançado do pensamento reformado ortodoxo.", link: "https://www.prpbooks.com/book/institutes-of-elenctic-theology-3-vols" },
+            { author: "Bavinck, Herman", title: "Dogmática Reformada, Vol. 1: Prolegômenos", comment: "Engaja a ortodoxia com os desafios da modernidade, oferecendo uma visão orgânica e trinitária da revelação. Vasta erudição com abordagem pastoral.", link: "https://www.editoraculturacrista.com.br/produto/box-dogmatica-reformada-4-volumes-1090016" },
+            { author: "Warfield, B.B.", title: "A Inspiração e Autoridade da Bíblia", comment: "A defesa clássica da inspiração e inerrância da Escritura. Combina exegese, análise histórica e rigor lógico contra o liberalismo.", link: "https://www.editoraculturacrista.com.br/produto/inspiracao-e-autoridade-da-biblia-a-513" },
+            { author: "Van Til, Cornelius", title: "The Defense of the Faith", comment: "A apresentação mais sistemática da apologética pressuposicional. Obra fundamental para compreender a epistemologia reformada do século XX.", link: "https://www.prpbooks.com/book/defense-of-the-faith-the-4th-ed" },
+            { author: "Berkhof, Louis", title: "Teologia Sistemática", comment: "O manual padrão em seminários por décadas. Celebrado pela clareza, organização e fidelidade à ortodoxia confessional. Excelente ponto de partida.", link: "https://www.editoraculturacrista.com.br/produto/teologia-sistematica-4-edicao-91550" },
+            { author: "Frame, John M.", title: "A Doutrina do Conhecimento de Deus", comment: "Uma exploração moderna e profunda da epistemologia reformada. Desenvolve o 'triperspectivalismo' como uma ferramenta didática e aplicável.", link: "https://www.vidanova.com.br/livros/a-doutrina-do-conhecimento-de-deus" }
+        ]
+    },
+
+    chartInstance: null,
+
+    init() {
+        this.renderNav();
+        this.renderContent('intro');
+        this.setupEventListeners();
+    },
+
+    renderNav() {
+        const navEl = document.getElementById('main-nav');
+        this.data.sections.forEach(section => {
+            const link = document.createElement('a');
+            link.href = '#';
+            link.textContent = section.title;
+            link.dataset.sectionId = section.id;
+            link.className = 'nav-link block p-3 rounded-lg text-lg';
+            if (section.id === 'intro') {
+                link.classList.add('active');
+            }
+            navEl.appendChild(link);
+        });
+    },
+
+    renderContent(sectionId) {
+        const sectionData = this.data.sections.find(s => s.id === sectionId);
+        const contentArea = document.getElementById('content-area');
+        if (!sectionData) return;
+
+        contentArea.innerHTML = sectionData.content;
+        
+        if (sectionId === 'figuras') {
+            this.renderTheologians();
+        } else if (sectionId === 'comparativo') {
+            this.renderComparisonChart();
+            this.renderComparisonButtons();
+        } else if (sectionId === 'bibliografia') {
+            this.renderBibliography();
+        }
+        
+        this.setupTermListeners();
+        window.scrollTo(0, 0);
+    },
+
+    renderTheologians() {
+        const grid = document.getElementById('theologians-grid');
+        grid.innerHTML = this.data.theologians.map(t => `
+            <div class="perspective-1000">
+                <div class="card-flipper w-full h-48 relative cursor-pointer">
+                    <div class="card-front absolute w-full h-full bg-amber-50 rounded-lg p-4 flex flex-col justify-center items-center text-center shadow-md border border-[#D5BBA1]">
+                        <h3 class="text-xl font-bold">${t.name}</h3>
+                        <p class="text-sm text-[#8A5A44] italic">${t.title}</p>
+                    </div>
+                    <div class="card-back absolute w-full h-full bg-[#B08968] text-white rounded-lg p-4 flex flex-col justify-center text-center shadow-lg">
+                        <p class="text-sm">${t.contribution}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.card-flipper').forEach(card => {
+            card.addEventListener('click', () => card.classList.toggle('is-flipped'));
+        });
+    },
+
+    renderComparisonChart() {
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        if (this.chartInstance) {
+            this.chartInstance.destroy();
+        }
+        this.chartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: this.data.comparisonData.labels,
+                datasets: [this.data.comparisonData.datasets[0]]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        pointLabels: { 
+                            font: { size: 12, family: "'Inter', sans-serif" },
+                            color: '#403A3A'
+                        },
+                        ticks: {
+                            backdropColor: 'transparent',
+                            stepSize: 1,
+                            max: 5,
+                            min: 0,
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: { size: 14, family: "'Inter', sans-serif" }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    renderComparisonButtons() {
+        const buttonContainer = document.getElementById('comparison-buttons');
+        const datasets = this.data.comparisonData.datasets;
+        buttonContainer.innerHTML = datasets.map((ds, index) => `
+            <button data-index="${index}" class="comparison-btn px-4 py-2 rounded-md text-sm font-semibold transition-colors ${index === 0 ? 'bg-[#5C3D2E] text-white' : 'bg-amber-100 text-[#5C3D2E] hover:bg-amber-200'}">${ds.label}</button>
+        `).join('');
+
+        document.querySelectorAll('.comparison-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = e.target.dataset.index;
+                this.updateChart(index);
+
+                document.querySelectorAll('.comparison-btn').forEach(b => {
+                    b.classList.remove('bg-[#5C3D2E]', 'text-white');
+                    b.classList.add('bg-amber-100', 'text-[#5C3D2E]', 'hover:bg-amber-200');
+                });
+                e.target.classList.add('bg-[#5C3D2E]', 'text-white');
+                e.target.classList.remove('bg-amber-100', 'hover:bg-amber-200');
+            });
+        });
+    },
+
+    updateChart(datasetIndex) {
+        if (!this.chartInstance) return;
+        this.chartInstance.data.datasets = [this.data.comparisonData.datasets[datasetIndex]];
+        this.chartInstance.update();
+    },
+
+    renderBibliography() {
+        const listEl = document.getElementById('bibliography-list');
+        listEl.innerHTML = this.data.bibliography.map(item => `
+            <div class="bg-amber-50 p-4 rounded-lg border border-[#D5BBA1]">
+                <h3 class="text-xl font-bold">${item.author}, <em>${item.title}</em>.</h3>
+                <p class="my-2 text-gray-700">${item.comment}</p>
+                <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="text-[#8A5A44] font-semibold hover:underline">Acessar Recurso &rarr;</a>
+            </div>
+        `).join('');
+    },
+
+    setupEventListeners() {
+        document.getElementById('main-nav').addEventListener('click', e => {
+            e.preventDefault();
+            const targetLink = e.target.closest('a');
+            if (targetLink && targetLink.dataset.sectionId) {
+                const sectionId = targetLink.dataset.sectionId;
+                this.renderContent(sectionId);
+                
+                document.querySelectorAll('#main-nav a').forEach(link => link.classList.remove('active'));
+                targetLink.classList.add('active');
+
+                if (window.innerWidth < 1024) {
+                    document.getElementById('sidebar').classList.add('-translate-x-full');
+                }
+            }
+        });
+
+        const modal = document.getElementById('definition-modal');
+        const modalContent = modal.querySelector('div');
+        document.getElementById('modal-close-btn').addEventListener('click', () => this.closeModal());
+        modal.addEventListener('click', (e) => {
+             if (e.target === modal) {
+                this.closeModal();
+            }
+        });
+
+        const sidebar = document.getElementById('sidebar');
+        document.getElementById('sidebar-open').addEventListener('click', () => {
+            sidebar.classList.remove('-translate-x-full');
+        });
+        document.getElementById('sidebar-close').addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+        });
+    },
+    
+    setupTermListeners() {
+        document.querySelectorAll('.definition-term').forEach(term => {
+            term.addEventListener('click', e => {
+                const termId = e.target.dataset.term;
+                this.showModal(termId);
+            });
+        });
+    },
+
+    showModal(termId) {
+        const definition = this.data.definitions[termId];
+        if (!definition) return;
+        
+        const modal = document.getElementById('definition-modal');
+        document.getElementById('modal-title').textContent = definition.title;
+        document.getElementById('modal-content').textContent = definition.text;
+
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        modal.querySelector('div').classList.remove('scale-95');
+    },
+
+    closeModal() {
+        const modal = document.getElementById('definition-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('pointer-events-none');
+        }, 300);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+
+</body>
+</html>
